@@ -10,12 +10,12 @@
     "build": "ember build",
     "test": "ember test"
   },
-  "repository": "https://github.com/stefanpenner/ember-cli",
+  "repository": "https://github.com/intercom/ember-undo-stack",
   "engines": {
     "node": ">= 0.10.0"
   },
-  "author": "",
-  "license": "MIT",
+  "author": "Gavin Joyce",
+  "license": "Apache",
   "devDependencies": {
     "body-parser": "^1.2.0",
     "broccoli-asset-rev": "0.3.1",

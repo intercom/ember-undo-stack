@@ -1,6 +1,6 @@
-# Ember-undo-stack
+# ember-undo-stack
 
-This README outlines the details of collaborating on this Ember addon.
+A simple undo/redo stack for Ember.js objects
 
 ## Installation
 
