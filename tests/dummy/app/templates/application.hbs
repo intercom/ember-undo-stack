@@ -1,3 +1,10 @@
-<h2 id='title'>Welcome to Ember.js</h2>
+<h2 id='title'>ember-undo-stack</h2>
 
-{{outlet}}
+{{textarea value=story cols='80' rows='6'}}
+
+<br />
+<button {{action 'undo'}} {{bind-attr disabled='cantUndo'}}>Undo</button>
+<button {{action 'redo'}} {{bind-attr disabled='cantRedo'}}>Redo</button>
+
+<hr />
+Undo Stack Info: {{undoStackInfo}}

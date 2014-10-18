@@ -13,7 +13,9 @@ export default Em.Mixin.create({
   undoStack: null,
   redoStack: null,
   canUndo: Em.computed.notEmpty('undoStack'),
+  cantUndo: Em.computed.not('canUndo'),
   canRedo: Em.computed.notEmpty('redoStack'),
+  cantRedo: Em.computed.not('canRedo'),
 
   checkpointData: Em.computed(function() {
     throw 'Please implement a `checkpointData` computed property';
@@ -38,44 +40,38 @@ export default Em.Mixin.create({
   },
 
   checkpoint: function() {
-    Em.instrument('Composer.undoStack.checkpoint', null, function() {
-      var checkpointData = this.get('checkpointData');
+    var checkpointData = this.get('checkpointData');
 
-      if(checkpointData !== this.get('undoStack.lastObject')) {
-        this.get('undoStack').pushObject(checkpointData);
-        this.get('redoStack').clear();
-      }
+    if(checkpointData !== this.get('undoStack.lastObject')) {
+      this.get('undoStack').pushObject(checkpointData);
+      this.get('redoStack').clear();
+    }
 
-      if(this.get('hasCheckpointsToRemove')) {
-        this.get('undoStack').removeAt(0, this.get('undoStackCheckpointsToRemoveCount'));
-      }
-    }, this);
+    if(this.get('hasCheckpointsToRemove')) {
+      this.get('undoStack').removeAt(0, this.get('undoStackCheckpointsToRemoveCount'));
+    }
   },
 
   undo: function() {
-    Em.instrument('Composer.undoStack.undo', null, function() {
-      if(this.get('canUndo')) {
-        var current = this.get('checkpointData');
+    if(this.get('canUndo')) {
+      var current = this.get('checkpointData');
 
-        var last = this.get('undoStack').popObject();
-        if(current !== last) {
-          this.restoreCheckpoint(last);
-          this.get('redoStack').pushObject(current);
-        } else {
-          this.undo();
-        }
+      var last = this.get('undoStack').popObject();
+      if(current !== last) {
+        this.restoreCheckpoint(last);
+        this.get('redoStack').pushObject(current);
+      } else {
+        this.undo();
       }
-    }, this);
+    }
   },
 
   redo: function() {
-    Em.instrument('Composer.undoStack.redo', null, function() {
-      if(this.get('canRedo')) {
-        var current = this.get('checkpointData');
-        var last = this.get('redoStack').popObject();
-        this.restoreCheckpoint(last);
-        this.get('undoStack').pushObject(current);
-      }
-    }, this);
+    if(this.get('canRedo')) {
+      var current = this.get('checkpointData');
+      var last = this.get('redoStack').popObject();
+      this.restoreCheckpoint(last);
+      this.get('undoStack').pushObject(current);
+    }
   }
 });
