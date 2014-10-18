@@ -4,13 +4,15 @@ A simple undo/redo stack for Ember.js objects
 
 Questions? Ping me [@gavinjoyce](https://twitter.com/gavinjoyce)
 
-![undo2](https://cloud.githubusercontent.com/assets/2526/4691232/8050d014-570d-11e4-86df-93442c590304.gif)
-
 ## Installation
 
 This is an Ember CLI addon, so all you need to do is
 
 `npm install ember-undo-stack --save`
+
+## Demo
+
+![undo2](https://cloud.githubusercontent.com/assets/2526/4691232/8050d014-570d-11e4-86df-93442c590304.gif)
 
 ## Usage Instructions
 
