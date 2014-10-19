@@ -1,5 +1,5 @@
 import Em from 'ember';
-import UndoStack from 'ember-undo-stack/undo-stack'
+import UndoStack from 'ember-undo-stack/undo-stack';
 
 export default Em.Controller.extend(UndoStack, {
   story: 'Once upon a time...',
@@ -8,7 +8,7 @@ export default Em.Controller.extend(UndoStack, {
   checkpointData: function() {
     return {
       story: this.get('story')
-    }
+    };
   }.property('story'),
 
   restoreCheckpoint: function(data) {
