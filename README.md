@@ -8,7 +8,7 @@ Questions? Ping me [@gavinjoyce](https://twitter.com/gavinjoyce)
 
 ## Installation
 
-This is an Ember CLI addon, so all you need to do is
+This is an Ember CLI addon, to install:
 
 `npm install ember-undo-stack --save`
 
@@ -18,7 +18,7 @@ This is an Ember CLI addon, so all you need to do is
 
 ## Usage Instructions
 
-Add the `UndoStack` mixin to your component and implement a `checkpointData` computed property and a `restoreCheckpoint` function:
+Add the `UndoStack` mixin  and implement a `checkpointData` computed property and a `restoreCheckpoint` function:
 
 ```javascript
 var Cat = Ember.Object.extend(UndoStack, {
