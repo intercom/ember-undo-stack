@@ -66,7 +66,7 @@ cat.get('name'); // => 'Hugo'
 
 * [ ] Create a few sample applications
 * [ ] Improve the docs
-* [ ] Store a diff between checkpoints instead of a copy
+* [ ] Store a diff between checkpoints instead of a copy (https://github.com/intercom/ember-undo-stack/issues/4)
 
 ## Development Instructions
 
