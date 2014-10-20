@@ -62,10 +62,11 @@ cat.get('name'); // => 'Hugo'
 
 ```
 
+A `throttledCheckpoint` function and `undoCheckpointThrottleInMilliseconds` property are also added.
+
 ## TODOs
 
 * [ ] Create a few sample applications
-* [ ] Improve the docs
 * [ ] Store a diff between checkpoints instead of a copy (https://github.com/intercom/ember-undo-stack/issues/4)
 
 ## Development Instructions
