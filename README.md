@@ -1,6 +1,6 @@
 # ember-undo-stack
 
-[![Build Status](https://travis-ci.org/intercom/ember-undo-stack.svg)](https://travis-ci.org/intercom/ember-undo-stack)
+[![Build Status](https://travis-ci.org/intercom/ember-undo-stack.svg?branch=master)](https://travis-ci.org/intercom/ember-undo-stack)
 
 A simple undo/redo stack for Ember.js objects
 
