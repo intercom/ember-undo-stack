@@ -45,6 +45,7 @@ export default Em.Mixin.create({
     if(checkpointData !== this.get('undoStack.lastObject')) {
       this.get('undoStack').pushObject(checkpointData);
       this.get('redoStack').clear();
+      this.set('_undoStackCurrent', checkpointData);
     }
 
     if(this.get('hasCheckpointsToRemove')) {
@@ -58,6 +59,7 @@ export default Em.Mixin.create({
 
       var last = this.get('undoStack').popObject();
       if(current !== last) {
+        this.set('_undoStackCurrent', last);
         this.restoreCheckpoint(last);
         this.get('redoStack').pushObject(current);
       } else {
@@ -68,7 +70,7 @@ export default Em.Mixin.create({
 
   redo: function() {
     if(this.get('canRedo')) {
-      var current = this.get('checkpointData');
+      var current = this.get('_undoStackCurrent');
       var last = this.get('redoStack').popObject();
       this.restoreCheckpoint(last);
       this.get('undoStack').pushObject(current);

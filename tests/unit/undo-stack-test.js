@@ -186,3 +186,16 @@ test('the undo stack has a maximum depth', function() {
   equal(cat.get('undoStackInfo'), 'undo: [0] redo: [3]');
   equal(cat.get('age'), 8);
 });
+
+test('modified objects do not get put on the undo stack when redoing', function() {
+  var cat = Cat.create({ name: 'Sully', age: 7 });
+
+  equal(cat.get('info'), 'Sully (7) has 0 kittens');
+  cat.checkpoint();
+  cat.set('name', 'Sooty');
+  cat.checkpoint();
+  cat.undo();
+  cat.set('name', 'Brian');
+  cat.redo();
+  equal(cat.get('info'), 'Sooty (7) has 0 kittens');
+});
