@@ -199,3 +199,26 @@ test('modified objects do not get put on the undo stack when redoing', function(
   cat.redo();
   equal(cat.get('info'), 'Sooty (7) has 0 kittens');
 });
+
+test('undo after redo works', function() {
+  var cat = Cat.create({ name: 'Sully', age: 7 });
+  cat.checkpoint();
+
+  equal(cat.get('info'), 'Sully (7) has 0 kittens');
+
+  cat.set('name', 'Sooty');
+  cat.checkpoint();
+  cat.set('name', 'Brian');
+  cat.checkpoint();
+  cat.set('name', 'Charlie');
+  cat.checkpoint();
+
+  cat.undo();
+  cat.undo();
+  equal(cat.get('info'), 'Sooty (7) has 0 kittens');
+  cat.redo();
+  cat.redo();
+  equal(cat.get('info'), 'Charlie (7) has 0 kittens');
+  cat.undo();
+  equal(cat.get('info'), 'Brian (7) has 0 kittens');
+});
