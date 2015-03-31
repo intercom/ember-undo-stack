@@ -73,6 +73,7 @@ export default Em.Mixin.create({
       var current = this.get('_undoStackCurrent');
       var last = this.get('redoStack').popObject();
       this.restoreCheckpoint(last);
+      this.set('_undoStackCurrent', last);
       this.get('undoStack').pushObject(current);
     }
   }
