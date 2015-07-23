@@ -1,36 +1,38 @@
 import Em from 'ember';
 import UndoStack from 'ember-undo-stack/undo-stack';
 
-export default Em.Controller.extend(UndoStack, {
+const { computed, observer, Controller } = Em;
+
+export default Controller.extend(UndoStack, {
   story: 'Once upon a time...',
   autoCheckpointEnabled: true,
 
-  checkpointData: function() {
+  checkpointData: computed('story', function() {
     return {
       story: this.get('story')
     };
-  }.property('story'),
+  }),
 
-  restoreCheckpoint: function(data) {
+  restoreCheckpoint(data) {
     this.set('autoCheckpointEnabled', false);
     this.set('story', data.story);
     this.set('autoCheckpointEnabled', true);
   },
 
-  onStoryChange: function() {
+  onStoryChange: observer('story', function() {
     if(this.get('autoCheckpointEnabled')) {
       this.throttledCheckpoint();
     }
-  }.observes('story'),
+  }),
 
   actions: {
-    checkpoint: function() {
+    checkpoint() {
       this.checkpoint();
     },
-    undo: function() {
+    undo() {
       this.undo();
     },
-    redo: function() {
+    redo() {
       this.redo();
     }
   }
