@@ -22,7 +22,7 @@ module('UndoStack', function() {
       return {
         name: this.get('name'),
         age: this.get('age'),
-        kittens: this.get('kittens').map(m => m.checkpointData)
+        kittens: this.get('kittens').getEach('checkpointData')
       };
     }),
     restoreCheckpoint(data) {
