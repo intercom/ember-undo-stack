@@ -1,23 +1,26 @@
-import Em from 'ember';
+import { notEmpty, not, gt } from '@ember/object/computed';
+import { A } from '@ember/array';
+import Mixin from '@ember/object/mixin';
+import { computed } from '@ember/object';
+import { on } from '@ember/object/evented';
+import { run } from '@ember/runloop';
 
-const { computed, on, run } = Em;
-
-export default Em.Mixin.create({
+export default Mixin.create({
   undoCheckpointThrottleInMilliseconds: 800,
   undoStackMaxDepth: 50,
 
   _undo_stack_setup: on('init', function() {
-    this.set('undoStack', Em.A());
-    this.set('redoStack', Em.A());
+    this.set('undoStack', A());
+    this.set('redoStack', A());
     this.get('checkpointData');
   }),
 
   undoStack: null,
   redoStack: null,
-  canUndo: computed.notEmpty('undoStack'),
-  cantUndo: computed.not('canUndo'),
-  canRedo: computed.notEmpty('redoStack'),
-  cantRedo: computed.not('canRedo'),
+  canUndo: notEmpty('undoStack'),
+  cantUndo: not('canUndo'),
+  canRedo: notEmpty('redoStack'),
+  cantRedo: not('canRedo'),
 
   checkpointData: computed(function() {
     throw 'Please implement a `checkpointData` computed property';
@@ -37,7 +40,7 @@ export default Em.Mixin.create({
     return this.get('undoStack.length') - this.get('undoStackMaxDepth');
   }),
 
-  hasCheckpointsToRemove: computed.gt('checkpointsToRemoveCount', 0),
+  hasCheckpointsToRemove: gt('checkpointsToRemoveCount', 0),
 
   throttledCheckpoint() {
     run.throttle(this, this.checkpoint, this.get('undoCheckpointThrottleInMilliseconds'), true);
