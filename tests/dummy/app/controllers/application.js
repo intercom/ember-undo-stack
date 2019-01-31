@@ -1,7 +1,6 @@
-import Em from 'ember';
+import { observer, computed } from '@ember/object';
+import Controller from '@ember/controller';
 import UndoStack from 'ember-undo-stack/undo-stack';
-
-const { computed, observer, Controller } = Em;
 
 export default Controller.extend(UndoStack, {
   story: 'Once upon a time...',
