@@ -33,6 +33,11 @@ module('UndoStack', function() {
         kittens.pushObject(Cat.restoreCheckpoint(kittenData));
       });
       return this;
+    },
+    destroyMethod() {},
+    willDestroy() {
+      this._super(...arguments);
+      this.destroyMethod();
     }
   }).reopenClass({
     deserialize(data) {
@@ -226,5 +231,22 @@ module('UndoStack', function() {
     assert.equal(cat.get('info'), 'Charlie (7) has 0 kittens');
     cat.undo();
     assert.equal(cat.get('info'), 'Brian (7) has 0 kittens');
+  });
+
+  test('Undo stack cancels timers and does not clobber willDestroy hooks on host objects', (assert) => {
+    let done = assert.async();
+    assert.expect(3);
+    const cat = Cat.create({
+      name: 'Sully',
+      age: 7,
+      destroyMethod() {
+        assert.ok('destroyMethod is called');
+        assert.equal(cat.get('undoStackThrottleTimer'), null, 'The throttle timer is cleared');
+        done();
+      }
+    });
+    cat.throttledCheckpoint();
+    assert.notEqual(cat.get('undoStackThrottleTimer'), null, 'The throttle timer is set');
+    cat.destroy();
   });
 });
