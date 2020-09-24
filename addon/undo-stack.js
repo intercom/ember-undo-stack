@@ -3,7 +3,7 @@ import { A } from '@ember/array';
 import Mixin from '@ember/object/mixin';
 import { computed } from '@ember/object';
 import { on } from '@ember/object/evented';
-import { run } from '@ember/runloop';
+import { run, cancel } from '@ember/runloop';
 
 export default Mixin.create({
   undoCheckpointThrottleInMilliseconds: 800,
@@ -17,6 +17,7 @@ export default Mixin.create({
 
   undoStack: null,
   redoStack: null,
+  undoStackThrottleTimer: null,
   canUndo: notEmpty('undoStack'),
   cantUndo: not('canUndo'),
   canRedo: notEmpty('redoStack'),
@@ -43,7 +44,7 @@ export default Mixin.create({
   hasCheckpointsToRemove: gt('checkpointsToRemoveCount', 0),
 
   throttledCheckpoint() {
-    run.throttle(this, this.checkpoint, this.get('undoCheckpointThrottleInMilliseconds'), true);
+    this.set('undoStackThrottleTimer', run.throttle(this, this.checkpoint, this.get('undoCheckpointThrottleInMilliseconds'), true));
   },
 
   checkpoint() {
@@ -83,5 +84,11 @@ export default Mixin.create({
       this.set('_undoStackCurrent', last);
       this.get('undoStack').pushObject(current);
     }
+  },
+
+  willDestroy() {
+    this._super(...arguments);
+    cancel(this.get('undoStackThrottleTimer'));
+    this.set('undoStackThrottleTimer', null);
   }
 });
