@@ -23,6 +23,9 @@
   "dependencies": {
     "ember-cli-babel": "^7.1.2"
   },
+  "resolutions": {
+    "sane": "^5.0.1"
+  },
   "devDependencies": {
     "@ember/optional-features": "^0.6.3",
     "broccoli-asset-rev": "^2.7.0",
