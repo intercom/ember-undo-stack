@@ -1,0 +1,60 @@
+name: Publish (staged)
+
+on:
+  release:
+    types: [published]           # GitHub's recommended trigger: publishing a Release creates the tag AND fires this
+
+permissions:
+  contents: read
+  id-token: write              # required for OIDC trusted publishing (stage-publish job)
+
+jobs:
+  # Verify the addon actually installs/builds/runs on the Node version we publish from.
+  # This is the guard against "it blows up in the Action": if this job fails, nothing is staged.
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      JOBS: 1                                   # REQUIRED: old broccoli-babel-transpiler EPIPE-crashes when it forks
+                                                # workers on modern Node; JOBS=1 transpiles in-process. (validated locally)
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false           # public repo: don't leave the token in .git/config
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: '.nvmrc'          # 24.11.0 (validated)
+      - name: Assert the Release tag matches package.json version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}   # via env, never inline in run: (secure-actions Rule 1)
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          [ "$RELEASE_TAG" = "$PKG_VERSION" ] || { echo "Release tag $RELEASE_TAG != package.json $PKG_VERSION"; exit 1; }
+      - name: Refuse stable releases not on master (prereleases may come from any branch)
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}   # via env, never inline in run: (secure-actions Rule 1)
+        run: |
+          # Defense-in-depth, NOT a boundary: a rewritten publish.yml can strip this.
+          # The real control is npm stage-only (E4). Public repo → anonymous `git fetch` works.
+          case "$RELEASE_TAG" in
+            *-*) echo "Prerelease ($RELEASE_TAG): branch source allowed"; exit 0 ;;  # semver prerelease has a hyphen
+          esac
+          git fetch origin master --depth=1
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/master \
+            || { echo "Stable release $RELEASE_TAG is not reachable from master — refusing"; exit 1; }
+      - run: yarn install --frozen-lockfile     # repo uses yarn
+      - run: yarn build                         # ember build — Node-only smoke test
+      - run: yarn test                          # ember test — headless Chrome; GitHub Actions sets CI=true automatically
+
+  stage-publish:
+    needs: verify                               # only stage if verify passed on the pinned Node
+    runs-on: ubuntu-latest                      # GitHub-hosted (self-hosted unsupported for OIDC)
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false           # public repo: don't leave the token in .git/config
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm@11.15.0         # pinned; staged publishing needs npm >= 11.15.0
+      - run: npm stage publish --tag next        # --access omitted: package is already public. Version comes from package.json, not the Release name.
