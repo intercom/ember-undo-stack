@@ -1,6 +1,6 @@
 {
   "name": "ember-undo-stack",
-  "version": "1.0.3",
+  "version": "99.99.99",
   "description": "A simple undo/redo stack for Ember.js objects",
   "keywords": [
     "ember-addon"
