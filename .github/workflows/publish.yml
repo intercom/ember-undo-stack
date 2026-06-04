@@ -5,13 +5,17 @@ on:
     types: [published]           # publishing a Release creates the tag and fires this (GitHub's recommended trigger)
 
 permissions:
-  contents: read
-  id-token: write              # OIDC trusted publishing (stage-publish job)
+  contents: read               # id-token: write is granted per-job to stage-publish only (verify doesn't need it)
+
+concurrency:
+  group: publish-${{ github.event.release.tag_name }}   # serialize publishes per release tag
+  cancel-in-progress: false                             # never interrupt an in-flight stage/publish
 
 jobs:
   # Build the addon on the Node version we publish from — catches Node-incompat before anything is staged.
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       JOBS: 1                   # broccoli-babel-transpiler EPIPE-crashes forking workers on modern Node; JOBS=1 builds in-process
     steps:
@@ -45,6 +49,10 @@ jobs:
   stage-publish:
     needs: verify
     runs-on: ubuntu-latest                      # GitHub-hosted runner — self-hosted is unsupported for OIDC
+    timeout-minutes: 10
+    permissions:
+      contents: read                            # for checkout
+      id-token: write                           # OIDC trusted publishing — scoped to this job only
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
@@ -54,4 +62,5 @@ jobs:
           node-version-file: '.nvmrc'
           registry-url: 'https://registry.npmjs.org'
       - run: npm install -g npm@11.15.0         # Rule 6: pinned exact version; staged publishing needs npm >= 11.15.0
+      # experiment-specific: `next` keeps `latest` on 1.0.2 untouched — a real package's stable release would publish to `latest`.
       - run: npm stage publish --tag next       # version comes from package.json, not the Release name; --access omitted (already public)
