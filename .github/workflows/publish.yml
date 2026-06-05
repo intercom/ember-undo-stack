@@ -32,18 +32,15 @@ jobs:
         run: |
           PKG_VERSION="v$(node -p "require('./package.json').version")"
           [ "$RELEASE_TAG" = "$PKG_VERSION" ] || { echo "Release tag $RELEASE_TAG != package.json $PKG_VERSION"; exit 1; }
-      - name: Refuse stable releases not reachable from master
+      - name: Refuse releases not reachable from master
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          # Defense-in-depth only — the real control is npm stage-only (E4).
-          case "$RELEASE_TAG" in
-            *-*) echo "Prerelease ($RELEASE_TAG): branch source allowed"; exit 0 ;;   # semver prerelease (has a hyphen) is exempt
-          esac
-          git fetch origin master              # full history (no --depth) so merge-base can walk ancestry
+          # Every release must come from reviewed master code.
+          git fetch origin master || { echo "Could not fetch origin/master — refusing"; exit 1; }   # full history (no --depth) so merge-base can walk ancestry
           git merge-base --is-ancestor "$GITHUB_SHA" origin/master \
-            || { echo "Stable release $RELEASE_TAG is not reachable from master — refusing"; exit 1; }
-      - run: yarn install --frozen-lockfile     # Rule 6: lockfile-frozen install (yarn's `npm ci`)
+            || { echo "Release $RELEASE_TAG is not reachable from master — refusing"; exit 1; }
+      - run: yarn install --frozen-lockfile     # lockfile-frozen install (yarn's `npm ci`)
       - run: yarn build         # build is the pre-stage smoke test; tests run as a required check on master, not here
 
   stage-publish:
@@ -61,6 +58,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           registry-url: 'https://registry.npmjs.org'
-      - run: npm install -g npm@11.15.0         # Rule 6: pinned exact version; staged publishing needs npm >= 11.15.0
-      # experiment-specific: `next` keeps `latest` on 1.0.2 untouched — a real package's stable release would publish to `latest`.
-      - run: npm stage publish --tag next       # version comes from package.json, not the Release name; --access omitted (already public)
+      - run: npm install -g npm@11.15.0         # pinned exact version; staged publishing needs npm >= 11.15.0
+      # Version comes from package.json (not the Release name); --tag omitted so it defaults to `latest`;
+      # --access omitted (package is already public). Stable releases from master only — no prerelease/next path.
+      - run: npm stage publish
