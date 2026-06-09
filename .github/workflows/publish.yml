@@ -2,63 +2,68 @@ name: Publish (staged)
 
 on:
   release:
-    types: [published]           # publishing a Release creates the tag and fires this (GitHub's recommended trigger)
+    types: [published]        # cutting a Release creates the tag AND fires this
 
 permissions:
-  contents: read               # id-token: write is granted per-job to stage-publish only (verify doesn't need it)
-
-concurrency:
-  group: publish-${{ github.event.release.tag_name }}   # serialize publishes per release tag
-  cancel-in-progress: false                             # never interrupt an in-flight stage/publish
+  contents: read              # workflow default (least privilege); only stage-publish also needs id-token, granted on that job
 
 jobs:
-  # Build the addon on the Node version we publish from — catches Node-incompat before anything is staged.
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      JOBS: 1                   # broccoli-babel-transpiler EPIPE-crashes forking workers on modern Node; JOBS=1 builds in-process
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd   # v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          persist-credentials: false           # public repo: don't leave the token in .git/config
-          fetch-depth: 0                        # full history — the release-source guard's merge-base needs ancestry (default depth-1 has none)
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: '.nvmrc'
-      - name: Assert the Release tag matches package.json version
+          node-version-file: '.nvmrc'      # pin ≥ 22.14.0
+          package-manager-cache: false
+      - name: Assert Release tag matches package.json version
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}   # routed via env, not inline in run: (secure-actions Rule 1)
+          RELEASE_TAG: ${{ github.event.release.tag_name }}   # via env, never inline in run:
         run: |
-          PKG_VERSION="v$(node -p "require('./package.json').version")"
-          [ "$RELEASE_TAG" = "$PKG_VERSION" ] || { echo "Release tag $RELEASE_TAG != package.json $PKG_VERSION"; exit 1; }
-      - name: Refuse releases not reachable from master
+          PKG="v$(node -p "require('./package.json').version")"
+          [ "$RELEASE_TAG" = "$PKG" ] || { echo "tag $RELEASE_TAG != package.json $PKG"; exit 1; }
+      - name: Refuse releases not on the default branch
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}   # main or master, per repo
         run: |
-          # Every release must come from reviewed master code.
-          git fetch origin master || { echo "Could not fetch origin/master — refusing"; exit 1; }   # full history (no --depth) so merge-base can walk ancestry
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/master \
-            || { echo "Release $RELEASE_TAG is not reachable from master — refusing"; exit 1; }
-      - run: yarn install --frozen-lockfile     # lockfile-frozen install (yarn's `npm ci`)
-      - run: yarn build         # build is the pre-stage smoke test; tests run as a required check on master, not here
+          git fetch origin "$DEFAULT_BRANCH" --depth=1
+          git merge-base --is-ancestor "$GITHUB_SHA" "origin/$DEFAULT_BRANCH" \
+            || { echo "release $RELEASE_TAG not reachable from $DEFAULT_BRANCH — refusing"; exit 1; }
 
   stage-publish:
     needs: verify
-    runs-on: ubuntu-latest                      # GitHub-hosted runner — self-hosted is unsupported for OIDC
-    timeout-minutes: 10
+    runs-on: ubuntu-latest
     permissions:
-      contents: read                            # for checkout
-      id-token: write                           # OIDC trusted publishing — scoped to this job only
+      contents: read
+      id-token: write           # OIDC trusted publishing: only this job mints the token
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd   # v6.0.2
+        with: { persist-credentials: false }
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version-file: '.nvmrc'
           registry-url: 'https://registry.npmjs.org'
-      - run: npm install -g npm@11.15.0         # pinned exact version; staged publishing needs npm >= 11.15.0
-      # Version comes from package.json (not the Release name); --tag omitted so it defaults to `latest`;
-      # --access omitted (package is already public). Stable releases from master only — no prerelease/next path.
-      - run: npm stage publish
+          package-manager-cache: false
+      # Per-repo (ember-undo-stack uses yarn): install + build so the publishable artifact exists.
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+        env:
+          JOBS: 1   # broccoli-babel-transpiler EPIPE-crashes forking workers on modern Node; JOBS=1 builds in-process
+      - run: npm install -g npm@11.15.0    # npm CLI: staged publishing needs npm ≥ 11.15.0
+      - name: Resolve dist-tag (a prerelease must never go to `latest`)
+        id: disttag
+        env:
+          PRERELEASE_TAG: next   # prerelease channel; `next` is a fine default — override only if the package already publishes to an established tag (e.g. `beta`)
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          case "$VERSION" in
+            *-*) TAG="$PRERELEASE_TAG" ;;   # any prerelease (1.2.3-...) -> the package's prerelease tag
+            *)   TAG="latest" ;;            # stable -> latest
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+      - name: Stage publish
+        env:
+          DIST_TAG: ${{ steps.disttag.outputs.tag }}   # via env, never inline in run:
+        run: npm stage publish --tag "$DIST_TAG"
